@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +11,12 @@
   --text: #e2e8f0; --text-muted: #64748b; --text-dim: #94a3b8;
   --danger: #ef4444; --warning: #f59e0b; --info: #3b82f6; --success: #10b981;
   --radius: 8px;
+}
+[data-theme="light"] {
+  --bg: #f4f6f9; --surface: #fff; --surface2: #f1f5f9;
+  --border: #e2e8f0; --primary: #0f6e56; --primary-dim: #0a4535;
+  --text: #1a2332; --text-muted: #64748b; --text-dim: #475569;
+  --danger: #dc2626; --warning: #d97706; --info: #2563eb; --success: #059669;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Courier New', monospace; background: var(--bg); color: var(--text); font-size: 13px; height: 100vh; display: flex; flex-direction: column; }
@@ -140,6 +146,12 @@ canvas { width: 100% !important; }
   <div class="header-right">
     <span><span class="live-dot" id="live-dot"></span> LIVE</span>
     <span id="rbg-status">RBG: —</span>
+    <span style="display:flex;gap:4px">
+      <button onclick="setLang('es')" id="lb-es" style="padding:2px 7px;border-radius:5px;border:1px solid #2d3148;background:#1d9e75;color:#fff;font-size:11px;font-weight:700;cursor:pointer">ES</button>
+      <button onclick="setLang('pt')" id="lb-pt" style="padding:2px 7px;border-radius:5px;border:1px solid #2d3148;background:transparent;color:#64748b;font-size:11px;font-weight:700;cursor:pointer">PT</button>
+      <button onclick="setLang('en')" id="lb-en" style="padding:2px 7px;border-radius:5px;border:1px solid #2d3148;background:transparent;color:#64748b;font-size:11px;font-weight:700;cursor:pointer">EN</button>
+    </span>
+    <button onclick="toggleTheme()" id="theme-btn" style="padding:2px 10px;border-radius:5px;border:1px solid #2d3148;background:transparent;color:#64748b;font-size:12px;cursor:pointer">☀️</button>
     <span id="clock">--:--:--</span>
   </div>
 </header>
@@ -570,6 +582,158 @@ async function refreshAll() {
     await refreshZerto();
   } catch(e) { console.error(e); }
 }
+
+// ── i18n ──────────────────────────────────────────
+const STRINGS = {
+  es: {
+    tab_kpis:'📊 KPIs', tab_systems:'🖥 Systems', tab_zerto:'🛡 Zerto', tab_about:'ℹ About',
+    kpi_total:'Altas procesadas', kpi_total_sub:'acumulado total',
+    kpi_hour:'Última hora', kpi_hour_sub:'altas/hora',
+    kpi_avg:'Tiempo medio', kpi_avg_sub:'minutos por alta',
+    kpi_beds:'Camas liberadas hoy', kpi_beds_sub:'jornada en curso',
+    kpi_pending:'Pacientes en espera', kpi_pending_sub:'pendientes de alta',
+    kpi_24h:'Últimas 24h', kpi_24h_sub:'altas totales',
+    last_title:'Última alta registrada', last_patient:'Paciente', last_ward:'Planta',
+    last_diag:'Diagnóstico', last_type:'Tipo de alta', last_doctor:'Médico',
+    last_timer_lbl:'seg. desde la última alta',
+    chart_rate:'Altas por minuto (últimos 20 min)', chart_total:'Altas acumuladas (sesión)',
+    ward_title:'Ocupación por planta', ward_freed:'liberadas hoy',
+    sys_title:'Estado de las VMs', log_title:'Log de eventos del sistema',
+    vpg_title:'Virtual Protection Groups', vm_title:'VMs protegidas',
+    alerts_title:'Alertas activas', events_title:'Eventos recientes',
+    no_alerts:'Sin alertas activas', no_events:'Sin eventos',
+    about_desc:'Simulador de gestión de altas médicas hospitalarias para demos de continuidad de negocio con Zerto.',
+    theme_toggle:'☀️ Modo claro',
+  },
+  pt: {
+    tab_kpis:'📊 KPIs', tab_systems:'🖥 Systems', tab_zerto:'🛡 Zerto', tab_about:'ℹ Sobre',
+    kpi_total:'Altas processadas', kpi_total_sub:'total acumulado',
+    kpi_hour:'Última hora', kpi_hour_sub:'altas/hora',
+    kpi_avg:'Tempo médio', kpi_avg_sub:'minutos por alta',
+    kpi_beds:'Camas libertadas hoje', kpi_beds_sub:'jornada em curso',
+    kpi_pending:'Doentes em espera', kpi_pending_sub:'pendentes de alta',
+    kpi_24h:'Últimas 24h', kpi_24h_sub:'altas totais',
+    last_title:'Última alta registada', last_patient:'Doente', last_ward:'Enfermaria',
+    last_diag:'Diagnóstico', last_type:'Tipo de alta', last_doctor:'Médico',
+    last_timer_lbl:'seg. desde a última alta',
+    chart_rate:'Altas por minuto (últimos 20 min)', chart_total:'Altas acumuladas (sessão)',
+    ward_title:'Ocupação por enfermaria', ward_freed:'libertadas hoje',
+    sys_title:'Estado das VMs', log_title:'Log de eventos do sistema',
+    vpg_title:'Virtual Protection Groups', vm_title:'VMs protegidas',
+    alerts_title:'Alertas ativas', events_title:'Eventos recentes',
+    no_alerts:'Sem alertas ativas', no_events:'Sem eventos',
+    about_desc:'Simulador de gestão de altas hospitalares para demos de continuidade de negócio com Zerto.',
+    theme_toggle:'☀️ Modo claro',
+  },
+  en: {
+    tab_kpis:'📊 KPIs', tab_systems:'🖥 Systems', tab_zerto:'🛡 Zerto', tab_about:'ℹ About',
+    kpi_total:'Discharges', kpi_total_sub:'cumulative total',
+    kpi_hour:'Last hour', kpi_hour_sub:'discharges/hour',
+    kpi_avg:'Avg. time', kpi_avg_sub:'minutes per discharge',
+    kpi_beds:'Beds freed today', kpi_beds_sub:'current shift',
+    kpi_pending:'Patients waiting', kpi_pending_sub:'pending discharge',
+    kpi_24h:'Last 24h', kpi_24h_sub:'total discharges',
+    last_title:'Last discharge', last_patient:'Patient', last_ward:'Ward',
+    last_diag:'Diagnosis', last_type:'Discharge type', last_doctor:'Physician',
+    last_timer_lbl:'sec. since last discharge',
+    chart_rate:'Discharges per minute (last 20 min)', chart_total:'Cumulative discharges (session)',
+    ward_title:'Ward occupancy', ward_freed:'freed today',
+    sys_title:'VM status', log_title:'System event log',
+    vpg_title:'Virtual Protection Groups', vm_title:'Protected VMs',
+    alerts_title:'Active alerts', events_title:'Recent events',
+    no_alerts:'No active alerts', no_events:'No events',
+    about_desc:'Hospital discharge management simulator for business continuity demos with Zerto.',
+    theme_toggle:'☀️ Light mode',
+  },
+};
+
+let currentLang = localStorage.getItem('hdm_obs_lang') || 'es';
+let currentTheme = localStorage.getItem('hdm_obs_theme') || 'dark';
+
+function t(key) { return STRINGS[currentLang][key] || STRINGS['es'][key] || key; }
+
+function applyI18n() {
+  // Tabs
+  const tabs = document.querySelectorAll('.tab');
+  const keys = ['tab_kpis','tab_systems','tab_zerto','tab_about'];
+  tabs.forEach((tab, i) => { if (keys[i]) tab.textContent = t(keys[i]); });
+
+  // KPI labels
+  const kpiMap = {
+    'k-total': ['kpi_total','kpi_total_sub'], 'k-hour': ['kpi_hour','kpi_hour_sub'],
+    'k-avg':   ['kpi_avg','kpi_avg_sub'],     'k-beds': ['kpi_beds','kpi_beds_sub'],
+    'k-pending':['kpi_pending','kpi_pending_sub'], 'k-24h':['kpi_24h','kpi_24h_sub'],
+  };
+  Object.entries(kpiMap).forEach(([id, [labelKey, subKey]]) => {
+    const card = document.getElementById(id)?.closest('.kpi-card');
+    if (card) {
+      const lbl = card.querySelector('.kpi-label');
+      const sub = card.querySelector('.kpi-sub');
+      if (lbl) lbl.textContent = t(labelKey);
+      if (sub) sub.textContent = t(subKey);
+    }
+  });
+
+  // Timer label
+  const timerLbl = document.querySelector('.last-timer .timer-lbl');
+  if (timerLbl) timerLbl.textContent = t('last_timer_lbl');
+
+  // Chart titles
+  const chartTitles = document.querySelectorAll('.chart-title');
+  if (chartTitles[0]) chartTitles[0].textContent = t('chart_rate');
+  if (chartTitles[1]) chartTitles[1].textContent = t('chart_total');
+
+  // Section h3 titles
+  document.querySelectorAll('.panel-section > h3').forEach(h3 => {
+    const txt = h3.textContent.trim();
+    const map = {
+      'KPIs hospitalarios en tiempo real': 'kpi_total',
+      'Última alta registrada': 'last_title',
+      'Ocupación por planta': 'ward_title', 'Ocupação por enfermaria': 'ward_title', 'Ward occupancy': 'ward_title',
+      'Estado de las VMs': 'sys_title', 'Estado das VMs': 'sys_title', 'VM status': 'sys_title',
+      'Log de eventos del sistema': 'log_title',
+      'Virtual Protection Groups': 'vpg_title',
+      'VMs protegidas': 'vm_title', 'VMs protegidas': 'vm_title', 'Protected VMs': 'vm_title',
+      'Alertas activas': 'alerts_title', 'Alertas ativas': 'alerts_title', 'Active alerts': 'alerts_title',
+      'Eventos recientes': 'events_title', 'Eventos recentes': 'events_title', 'Recent events': 'events_title',
+    };
+  });
+
+  // Sections usando data-i18n si los tienen, o actualizando directamente
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+
+  // Lang buttons
+  ['es','pt','en'].forEach(lang => {
+    const btn = document.getElementById('lb-' + lang);
+    if (btn) {
+      btn.style.background = lang === currentLang ? 'var(--primary)' : 'transparent';
+      btn.style.color = lang === currentLang ? '#fff' : '#64748b';
+    }
+  });
+
+  // Theme button
+  const tb = document.getElementById('theme-btn');
+  if (tb) tb.textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('hdm_obs_lang', lang);
+  applyI18n();
+}
+
+function toggleTheme() {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('hdm_obs_theme', currentTheme);
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  applyI18n();
+}
+
+// Aplicar tema e idioma guardados al cargar
+document.documentElement.setAttribute('data-theme', currentTheme);
+applyI18n();
 
 refreshAll();
 setInterval(refreshAll, 4000);
