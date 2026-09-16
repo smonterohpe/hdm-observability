@@ -246,82 +246,64 @@ canvas { width: 100% !important; }
 
   <!-- ═══ ZERTO ═══ -->
   <div class="panel" id="panel-zerto">
+
+    <!-- Sites -->
     <section class="panel-section">
-      <h3>Virtual Protection Groups</h3>
-      <div class="vpg-grid">
+      <h3>Sites Zerto</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
         <div class="vpg-card">
-          <div class="vpg-name">🛡 HDM-VPG-PROD</div>
-          <div class="vpg-row"><span class="vpg-key">Estado</span><span class="vpg-val green">Meeting SLA</span></div>
-          <div class="vpg-row"><span class="vpg-key">VMs protegidas</span><span class="vpg-val blue">4</span></div>
-          <div class="vpg-row"><span class="vpg-key">Site origen</span><span class="vpg-val">Site A (Producción)</span></div>
-          <div class="vpg-row"><span class="vpg-key">Site destino</span><span class="vpg-val">Site B (DR)</span></div>
-          <div class="vpg-row"><span class="vpg-key">Journal</span><span class="vpg-val blue">7 días</span></div>
-          <div class="vpg-row"><span class="vpg-key">Compresión</span><span class="vpg-val green">Activa</span></div>
-          <div class="vpg-row"><span class="vpg-key">Encriptación WAN</span><span class="vpg-val green">Activa</span></div>
+          <div class="vpg-name" id="zerto-label-remote">🔴 — cargando...</div>
+          <div class="vpg-row"><span class="vpg-key">Accesible</span><span class="vpg-val" id="zerto-reach-remote">—</span></div>
+          <div class="vpg-row"><span class="vpg-key">VPGs</span><span class="vpg-val" id="zerto-vpgs-remote">—</span></div>
+          <div class="vpg-row"><span class="vpg-key">Alertas activas</span><span class="vpg-val" id="zerto-alerts-count-remote">—</span></div>
         </div>
-
         <div class="vpg-card">
-          <div class="vpg-name">⏱ RPO / RTO</div>
-          <div class="rpo-gauge">
-            <div class="rpo-val">~8 s</div>
-            <div class="rpo-lbl">RPO actual</div>
-          </div>
-          <div class="vpg-row"><span class="vpg-key">RPO objetivo</span><span class="vpg-val green">≤ 60 s</span></div>
-          <div class="vpg-row"><span class="vpg-key">RTO objetivo</span><span class="vpg-val green">≤ 15 min</span></div>
-          <div class="vpg-row"><span class="vpg-key">Último test</span><span class="vpg-val">Hoy <span id="vpg-test-time">—</span></span></div>
-          <div class="vpg-row"><span class="vpg-key">Resultado</span><span class="vpg-val green">✓ Passed</span></div>
-        </div>
-
-        <div class="vpg-card">
-          <div class="vpg-name">📖 Journal</div>
-          <div class="vpg-row"><span class="vpg-key">Retención</span><span class="vpg-val blue">7 días</span></div>
-          <div class="vpg-row"><span class="vpg-key">Puntos de recuperación</span><span class="vpg-val" id="vpg-checkpoints">—</span></div>
-          <div class="vpg-row"><span class="vpg-key">Más antiguo</span><span class="vpg-val" id="vpg-oldest">—</span></div>
-          <div class="vpg-row"><span class="vpg-key">Más reciente</span><span class="vpg-val green" id="vpg-newest">—</span></div>
-          <div class="vpg-row"><span class="vpg-key">Tamaño estimado</span><span class="vpg-val">~12 GB</span></div>
-          <div class="vpg-row"><span class="vpg-key">Tecnología</span><span class="vpg-val blue">Zerto Journal-Based</span></div>
+          <div class="vpg-name" id="zerto-label-local">🔴 — cargando...</div>
+          <div class="vpg-row"><span class="vpg-key">Accesible</span><span class="vpg-val" id="zerto-reach-local">—</span></div>
+          <div class="vpg-row"><span class="vpg-key">VPGs</span><span class="vpg-val" id="zerto-vpgs-local">—</span></div>
+          <div class="vpg-row"><span class="vpg-key">Alertas activas</span><span class="vpg-val" id="zerto-alerts-count-local">—</span></div>
         </div>
       </div>
     </section>
 
+    <!-- VPGs -->
     <section class="panel-section">
-      <h3>VMs en el VPG</h3>
+      <h3>Virtual Protection Groups</h3>
+      <div class="vpg-grid" id="vpg-grid">
+        <div style="color:var(--text-muted);font-size:12px">Cargando VPGs desde el zerto-probe...</div>
+      </div>
+    </section>
+
+    <!-- VMs protegidas -->
+    <section class="panel-section">
+      <h3>VMs protegidas</h3>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:10px;text-transform:uppercase">VM</th>
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:10px;text-transform:uppercase">IP</th>
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:10px;text-transform:uppercase">Rol</th>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:10px;text-transform:uppercase">Estado</th>
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:10px;text-transform:uppercase">RPO</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:10px;text-transform:uppercase">RPO actual</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:10px;text-transform:uppercase">IOPS</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:10px;text-transform:uppercase">Journal</th>
         </tr></thead>
-        <tbody>
-          <tr style="border-bottom:1px solid rgba(45,49,72,.4)">
-            <td style="padding:9px 12px">VM1 · Frontend</td><td style="padding:9px 12px;color:var(--text-dim)">10.10.44.13</td>
-            <td style="padding:9px 12px">nginx · Puerto 8081</td>
-            <td style="padding:9px 12px"><span style="color:var(--success)">● Protegida</span></td>
-            <td style="padding:9px 12px;color:var(--success)">~8 s</td>
-          </tr>
-          <tr style="border-bottom:1px solid rgba(45,49,72,.4)">
-            <td style="padding:9px 12px">VM2 · Backend</td><td style="padding:9px 12px;color:var(--text-dim)">10.10.44.14</td>
-            <td style="padding:9px 12px">FastAPI · Puerto 8001</td>
-            <td style="padding:9px 12px"><span style="color:var(--success)">● Protegida</span></td>
-            <td style="padding:9px 12px;color:var(--success)">~8 s</td>
-          </tr>
-          <tr style="border-bottom:1px solid rgba(45,49,72,.4)">
-            <td style="padding:9px 12px">VM3 · Database</td><td style="padding:9px 12px;color:var(--text-dim)">10.10.44.15</td>
-            <td style="padding:9px 12px">PostgreSQL · Puerto 5432</td>
-            <td style="padding:9px 12px"><span style="color:var(--success)">● Protegida</span></td>
-            <td style="padding:9px 12px;color:var(--success)">~8 s</td>
-          </tr>
-          <tr>
-            <td style="padding:9px 12px">VM4 · Observability</td><td style="padding:9px 12px;color:var(--text-dim)">10.10.44.16</td>
-            <td style="padding:9px 12px">nginx · Puerto 8082</td>
-            <td style="padding:9px 12px"><span style="color:var(--success)">● Protegida</span></td>
-            <td style="padding:9px 12px;color:var(--success)">~8 s</td>
-          </tr>
+        <tbody id="vpg-vms-body">
+          <tr><td colspan="5" style="padding:12px;color:var(--text-muted)">Cargando...</td></tr>
         </tbody>
       </table>
     </section>
+
+    <!-- Alertas y eventos -->
+    <section class="panel-section">
+      <h3>Alertas activas</h3>
+      <div id="zerto-alerts-list" style="font-size:12px;color:var(--text-muted)">Sin alertas activas</div>
+    </section>
+
+    <section class="panel-section">
+      <h3>Eventos recientes</h3>
+      <div class="log-box">
+        <div class="log-entries" id="zerto-events-list"></div>
+      </div>
+    </section>
+
   </div>
 
   <!-- ═══ ABOUT ═══ -->
@@ -408,18 +390,83 @@ function pushChart(chart, history, label, value, maxPoints) {
   chart.update('none');
 }
 
-// ── VPG datos dinámicos ────────────────────────────
-function updateVpgJournal() {
-  const now = new Date();
-  const oldest = new Date(now - 7 * 24 * 3600 * 1000);
-  const fmt = d => d.toLocaleDateString('es-ES') + ' ' + d.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
-  // checkpoints simulados: ~1 por segundo × 7 días
-  const checkpoints = Math.floor((Date.now() / 1000) % 604800 + 500000);
-  const el = id => document.getElementById(id);
-  if (el('vpg-checkpoints')) el('vpg-checkpoints').textContent = checkpoints.toLocaleString('es-ES');
-  if (el('vpg-oldest'))      el('vpg-oldest').textContent      = fmt(oldest);
-  if (el('vpg-newest'))      el('vpg-newest').textContent      = fmt(now);
-  if (el('vpg-test-time'))   el('vpg-test-time').textContent   = now.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
+// ── Zerto probe ────────────────────────────────────
+async function refreshZerto() {
+  try {
+    const d = await (await fetch('/zerto-hdm/data')).json();
+
+    // Sites
+    for (const [key, site] of [['remote', d.remote], ['local', d.local]]) {
+      const ok = site.reachable;
+      document.getElementById('zerto-label-' + key).textContent =
+        (ok ? '🟢 ' : '🔴 ') + (site.label || key);
+      document.getElementById('zerto-reach-' + key).textContent  = ok ? 'Sí' : 'No';
+      document.getElementById('zerto-vpgs-' + key).textContent   = ok ? site.vpgs.length : '—';
+      document.getElementById('zerto-alerts-count-' + key).textContent =
+        ok ? (site.active_alerts.length || '0') : '—';
+    }
+
+    // VPGs de ambos sites
+    const allVpgs = [...(d.remote.vpgs || []), ...(d.local.vpgs || [])];
+    document.getElementById('vpg-grid').innerHTML = allVpgs.length
+      ? allVpgs.map(v => {
+          const sla = v.is_meeting_sla;
+          const rpoColor = sla ? 'green' : 'red';
+          return \`<div class="vpg-card">
+            <div class="vpg-name">🛡 \${v.name}</div>
+            <div class="vpg-row"><span class="vpg-key">Estado</span>
+              <span class="vpg-val \${sla?'green':'red'}">\${v.status_label}</span></div>
+            \${v.substatus_label ? \`<div class="vpg-row"><span class="vpg-key">Sub-estado</span><span class="vpg-val">\${v.substatus_label}</span></div>\` : ''}
+            <div class="vpg-row"><span class="vpg-key">Site origen</span><span class="vpg-val">\${v.source_site||'—'}</span></div>
+            <div class="vpg-row"><span class="vpg-key">Site destino</span><span class="vpg-val">\${v.target_site||'—'}</span></div>
+            <div class="vpg-row"><span class="vpg-key">RPO actual</span>
+              <span class="vpg-val \${rpoColor}">\${v.actual_rpo_human}</span></div>
+            <div class="vpg-row"><span class="vpg-key">RPO configurado</span>
+              <span class="vpg-val">\${v.configured_rpo_seconds}s</span></div>
+            <div class="vpg-row"><span class="vpg-key">Journal</span>
+              <span class="vpg-val blue">\${v.journal_history_human} / \${v.configured_journal_human}</span></div>
+            <div class="vpg-row"><span class="vpg-key">Failsafe</span>
+              <span class="vpg-val">\${v.failsafe_history_human} / \${v.configured_failsafe_human}</span></div>
+          </div>\`;
+        }).join('')
+      : '<div style="color:var(--text-muted);font-size:12px">Sin VPGs disponibles</div>';
+
+    // VMs
+    const allVms = [...(d.remote.protected_vms || []), ...(d.local.protected_vms || [])];
+    document.getElementById('vpg-vms-body').innerHTML = allVms.length
+      ? allVms.map(vm => \`<tr style="border-bottom:1px solid rgba(45,49,72,.4)">
+          <td style="padding:9px 12px">\${vm.name}</td>
+          <td style="padding:9px 12px;color:var(--success)">\${vm.status_label}</td>
+          <td style="padding:9px 12px;color:var(--success)">\${vm.actual_rpo_human}</td>
+          <td style="padding:9px 12px">\${vm.iops}</td>
+          <td style="padding:9px 12px">\${vm.journal_size_human}</td>
+        </tr>\`).join('')
+      : '<tr><td colspan="5" style="padding:12px;color:var(--text-muted)">Sin VMs protegidas</td></tr>';
+
+    // Alertas
+    const alerts = [...(d.remote.active_alerts||[]), ...(d.local.active_alerts||[])];
+    document.getElementById('zerto-alerts-list').innerHTML = alerts.length
+      ? alerts.map(a => \`<div style="padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="color:\${a.level==='Error'?'var(--danger)':'var(--warning)'}">[\${a.level}]</span>
+          \${a.description} \${a.entity ? '· '+a.entity : ''}
+        </div>\`).join('')
+      : '<span style="color:var(--text-muted)">Sin alertas activas</span>';
+
+    // Eventos
+    const events = [...(d.remote.recent_events||[]), ...(d.local.recent_events||[])]
+      .sort((a,b) => (b.time||'').localeCompare(a.time||'')).slice(0,20);
+    document.getElementById('zerto-events-list').innerHTML = events.length
+      ? events.map(e => \`<div class="log-entry">
+          <span class="log-time">\${e.time ? new Date(e.time).toLocaleTimeString('es-ES') : '—'}</span>
+          <span class="log-sev info">[\${e.site||'—'}]</span>
+          <span class="log-msg">\${e.description} \${e.user ? '· '+e.user : ''}</span>
+        </div>\`).join('')
+      : '<div class="log-entry"><span class="log-msg" style="color:var(--text-muted)">Sin eventos</span></div>';
+
+  } catch(e) {
+    document.getElementById('vpg-grid').innerHTML =
+      '<div style="color:var(--danger);font-size:12px">⚠ zerto-probe no disponible: ' + e.message + '</div>';
+  }
 }
 
 // ── Fetch helpers ──────────────────────────────────
@@ -454,7 +501,9 @@ async function refreshLastDischarge() {
   const rows = await api('/discharges/recent?n=1');
   if (!rows.length) return;
   const d = rows[0];
-  lastDischargeTime = new Date(d.discharge_date).getTime();
+  const raw = d.discharge_date;
+  const ts = raw.endsWith('Z') ? raw : raw + 'Z';
+  lastDischargeTime = new Date(ts).getTime();
   document.getElementById('ld-name').textContent   = d.patient_name;
   document.getElementById('ld-ward').textContent   = d.ward;
   document.getElementById('ld-diag').textContent   = d.diagnosis_code + ' — ' + (d.diagnosis_description || '');
@@ -518,7 +567,7 @@ async function refreshAll() {
       refreshHealth(),
       refreshEvents(),
     ]);
-    updateVpgJournal();
+    await refreshZerto();
   } catch(e) { console.error(e); }
 }
 
