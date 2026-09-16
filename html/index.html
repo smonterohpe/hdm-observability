@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HDM — Observability Console</title>
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
+  --border: #2d3148; --primary: #1d9e75; --primary-dim: #0f6e56;
+  --text: #e2e8f0; --text-muted: #64748b; --text-dim: #94a3b8;
+  --danger: #ef4444; --warning: #f59e0b; --info: #3b82f6; --success: #10b981;
+  --red: #ef4444; --amber: #f59e0b; --teal: #1d9e75;
+  --radius: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Courier New', monospace; background: var(--bg); color: var(--text); font-size: 13px; height: 100vh; display: flex; flex-direction: column; }
+
+/* Header */
+header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 24px; height: 52px;
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.logo { font-size: 15px; font-weight: 700; color: var(--primary); letter-spacing: 1px; }
+.logo span { color: var(--text-dim); font-weight: 400; font-size: 12px; margin-left: 8px; }
+.header-right { display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--text-muted); }
+#clock { font-family: 'Courier New', monospace; color: var(--primary); font-size: 14px; letter-spacing: 1px; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); display: inline-block; animation: blink 1.5s ease-in-out infinite; }
+.live-dot.dead { background: var(--danger); animation: none; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* Tabs */
+nav {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; padding: 0 24px; flex-shrink: 0;
+}
+.tab {
+  padding: 12px 20px; cursor: pointer; font-size: 12px; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--text-muted); border-bottom: 2px solid transparent;
+  transition: all .2s; user-select: none;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+/* Panels */
+.panels { flex: 1; overflow-y: auto; }
+.panel { display: none; padding: 20px 24px; }
+.panel.active { display: block; }
+
+/* KPI grid */
+.kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; position: relative; overflow: hidden;
+}
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--primary); }
+.kpi-card.warn::before { background: var(--warning); }
+.kpi-card.danger::before { background: var(--danger); }
+.kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+.kpi-value { font-size: 36px; font-weight: 700; color: var(--primary); line-height: 1; }
+.kpi-card.warn .kpi-value { color: var(--warning); }
+.kpi-card.danger .kpi-value { color: var(--danger); }
+.kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* Ward occupancy */
+.ward-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.ward-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.ward-name { font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.ward-bar-bg { background: var(--surface2); border-radius: 4px; height: 6px; margin-bottom: 6px; overflow: hidden; }
+.ward-bar-fill { height: 100%; border-radius: 4px; background: var(--teal); transition: width .6s ease; }
+.ward-bar-fill.high { background: var(--warning); }
+.ward-bar-fill.full { background: var(--danger); }
+.ward-stats { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); }
+
+/* Systems panel */
+.sys-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.sys-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.sys-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sys-name { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.sys-status { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.sys-status.up { background: rgba(16,185,129,.15); color: var(--success); }
+.sys-status.down { background: rgba(239,68,68,.15); color: var(--danger); }
+.sys-metric { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.sys-metric span { color: var(--text); font-weight: 600; }
+
+/* Log de eventos */
+.log-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.log-header { padding: 10px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+.log-entries { max-height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; }
+.log-entry { padding: 6px 14px; border-bottom: 1px solid rgba(45,49,72,.5); display: flex; gap: 12px; }
+.log-entry:last-child { border-bottom: none; }
+.log-time { color: var(--text-muted); flex-shrink: 0; }
+.log-sev { flex-shrink: 0; width: 60px; }
+.log-sev.info { color: var(--info); }
+.log-sev.warning { color: var(--warning); }
+.log-sev.error, .log-sev.critical { color: var(--danger); }
+.log-msg { color: var(--text-dim); }
+
+/* Demo panel (dentro de Zerto) */
+.demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 16px; }
+.demo-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.demo-card h3 { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.demo-card p { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; }
+.btn {
+  padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+  font-size: 12px; font-weight: 600; letter-spacing: .5px; transition: opacity .2s;
+}
+.btn:hover { opacity: .85; }
+.btn-warning { background: var(--warning); color: #000; }
+.btn-danger  { background: var(--danger); color: #fff; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-info    { background: var(--info); color: #fff; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Demo alert banner */
+#demo-banner {
+  display: none; background: rgba(239,68,68,.1); border: 1px solid var(--danger);
+  border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px;
+  color: var(--danger); font-weight: 600; font-size: 12px; letter-spacing: .3px;
+  animation: flash .8s ease-in-out infinite alternate;
+}
+@keyframes flash { from{opacity:1} to{opacity:.5} }
+
+/* Zerto VPG */
+.vpg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.vpg-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.vpg-name { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--info); }
+.vpg-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(45,49,72,.4); font-size: 12px; }
+.vpg-row:last-child { border-bottom: none; }
+.vpg-key { color: var(--text-muted); }
+.vpg-val { color: var(--text); font-weight: 600; }
+.vpg-val.green { color: var(--success); }
+.vpg-val.amber { color: var(--warning); }
+.vpg-val.red   { color: var(--danger); }
+
+/* About */
+.about-content { max-width: 640px; }
+.about-content h2 { font-size: 18px; color: var(--primary); margin-bottom: 8px; }
+.about-content p { color: var(--text-dim); line-height: 1.7; margin-bottom: 12px; font-family: system-ui, sans-serif; font-size: 13px; }
+.vm-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+.vm-table th { text-align: left; padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+.vm-table td { padding: 8px 12px; border-bottom: 1px solid rgba(45,49,72,.4); font-size: 12px; }
+.vm-table tr:last-child td { border-bottom: none; }
+
+section.panel-section { margin-bottom: 20px; }
+section.panel-section > h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">HDM <span>Observability Console · Hospital Discharge Manager</span></div>
+  <div class="header-right">
+    <span><span class="live-dot" id="live-dot"></span> LIVE</span>
+    <span id="rbg-status">RBG: —</span>
+    <span id="clock">--:--:--</span>
+  </div>
+</header>
+
+<nav>
+  <div class="tab active" onclick="switchTab('kpis')">📊 KPIs</div>
+  <div class="tab" onclick="switchTab('systems')">🖥 Systems</div>
+  <div class="tab" onclick="switchTab('zerto')">🛡 Zerto</div>
+  <div class="tab" onclick="switchTab('about')">ℹ About</div>
+</nav>
+
+<div class="panels">
+
+  <!-- ═══ TAB: KPIs ═══ -->
+  <div class="panel active" id="panel-kpis">
+    <section class="panel-section">
+      <h3>KPIs hospitalarios en tiempo real</h3>
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Altas procesadas</div><div class="kpi-value" id="k-total">—</div><div class="kpi-sub">acumulado total</div></div>
+        <div class="kpi-card"><div class="kpi-label">Última hora</div><div class="kpi-value" id="k-hour">—</div><div class="kpi-sub">altas/hora</div></div>
+        <div class="kpi-card"><div class="kpi-label">Tiempo medio</div><div class="kpi-value" id="k-avg">—</div><div class="kpi-sub">minutos por alta</div></div>
+        <div class="kpi-card"><div class="kpi-label">Camas liberadas hoy</div><div class="kpi-value" id="k-beds">—</div><div class="kpi-sub">jornada en curso</div></div>
+        <div class="kpi-card" id="kpi-pending-card"><div class="kpi-label">Pacientes en espera</div><div class="kpi-value" id="k-pending">—</div><div class="kpi-sub">pendientes de alta</div></div>
+        <div class="kpi-card"><div class="kpi-label">Últimas 24 h</div><div class="kpi-value" id="k-24h">—</div><div class="kpi-sub">altas totales</div></div>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <h3>Ocupación por planta</h3>
+      <div class="ward-grid" id="ward-grid">
+        <div style="color:var(--text-muted);font-size:12px">Cargando plantas...</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══ TAB: Systems ═══ -->
+  <div class="panel" id="panel-systems">
+    <section class="panel-section">
+      <h3>Estado de las VMs</h3>
+      <div class="sys-grid">
+        <div class="sys-card">
+          <div class="sys-header">
+            <span class="sys-name">VM1 · Frontend</span>
+            <span class="sys-status up" id="sys-vm1">UP</span>
+          </div>
+          <div class="sys-metric">nginx · <span>Puerto 80</span></div>
+          <div class="sys-metric">Última respuesta: <span id="vm1-ts">—</span></div>
+        </div>
+        <div class="sys-card">
+          <div class="sys-header">
+            <span class="sys-name">VM2 · Backend</span>
+            <span class="sys-status up" id="sys-vm2">UP</span>
+          </div>
+          <div class="sys-metric">FastAPI + Gunicorn · <span>Puerto 8000</span></div>
+          <div class="sys-metric">RBG generadas: <span id="vm2-rbg">—</span></div>
+        </div>
+        <div class="sys-card">
+          <div class="sys-header">
+            <span class="sys-name">VM3 · Database</span>
+            <span class="sys-status up" id="sys-vm3">UP</span>
+          </div>
+          <div class="sys-metric">PostgreSQL 16 · <span>Puerto 5432</span></div>
+          <div class="sys-metric">Altas en DB: <span id="vm3-count">—</span></div>
+        </div>
+        <div class="sys-card">
+          <div class="sys-header">
+            <span class="sys-name">VM4 · Observability</span>
+            <span class="sys-status up">UP</span>
+          </div>
+          <div class="sys-metric">nginx · <span>Puerto 8080</span></div>
+          <div class="sys-metric">Console activa: <span style="color:var(--success)">✓</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <h3>Log de eventos del sistema</h3>
+      <div class="log-box">
+        <div class="log-header"><span>Eventos recientes</span><span id="log-count">—</span></div>
+        <div class="log-entries" id="log-entries">
+          <div class="log-entry"><span class="log-time">--:--:--</span><span class="log-sev info">[info]</span><span class="log-msg">Cargando...</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══ TAB: Zerto ═══ -->
+  <div class="panel" id="panel-zerto">
+
+    <div id="demo-banner"></div>
+
+    <section class="panel-section">
+      <h3>Virtual Protection Groups</h3>
+      <div class="vpg-grid">
+        <div class="vpg-card">
+          <div class="vpg-name">HDM-VPG-PROD</div>
+          <div class="vpg-row"><span class="vpg-key">Estado</span><span class="vpg-val green" id="vpg-state">Meeting SLA</span></div>
+          <div class="vpg-row"><span class="vpg-key">VMs protegidas</span><span class="vpg-val">4</span></div>
+          <div class="vpg-row"><span class="vpg-key">RPO actual</span><span class="vpg-val green" id="vpg-rpo">~8 s</span></div>
+          <div class="vpg-row"><span class="vpg-key">Journal</span><span class="vpg-val">7 días</span></div>
+          <div class="vpg-row"><span class="vpg-key">Destino</span><span class="vpg-val">Site B (DR)</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <h3>Demo Engine — escenarios de continuidad de negocio</h3>
+      <div class="demo-grid">
+
+        <div class="demo-card">
+          <h3 style="color:var(--info)">🔄 Failover Test</h3>
+          <p>Inicia un Failover Test no disruptivo. El VPG pasa a modo test y el tráfico se redirige a la réplica. Las altas siguen procesándose en el site DR.</p>
+          <button class="btn btn-info" onclick="runDemo('failover-test')">Iniciar Failover Test</button>
+        </div>
+
+        <div class="demo-card">
+          <h3 style="color:var(--warning)">⚠️ Error Humano</h3>
+          <p>Simula el borrado accidental de la tabla de altas por un operador. Los KPIs caen a cero. Usa el Journal de Zerto para hacer el recovery.</p>
+          <button class="btn btn-warning" onclick="runDemo('human-error')">Ejecutar Error Humano</button>
+        </div>
+
+        <div class="demo-card">
+          <h3 style="color:var(--danger)">💀 Ransomware (Wario)</h3>
+          <p>Wario cifra la base de datos. Los datos de pacientes quedan inaccesibles. Demostración de recovery con RPO de segundos desde el Zerto Journal.</p>
+          <button class="btn btn-danger" onclick="runDemo('ransomware')">Lanzar Wario 🎮</button>
+        </div>
+
+        <div class="demo-card">
+          <h3 style="color:var(--success)">✅ Recovery (Zerto Journal)</h3>
+          <p>Ejecuta el recovery desde el Journal de Zerto. El sistema vuelve al punto anterior al incidente. El RBG se reanuda automáticamente.</p>
+          <button class="btn btn-success" onclick="runDemo('recovery')">Ejecutar Recovery</button>
+        </div>
+
+      </div>
+      <div id="demo-result" style="margin-top:12px;font-size:12px;color:var(--text-muted)"></div>
+    </section>
+  </div>
+
+  <!-- ═══ TAB: About ═══ -->
+  <div class="panel" id="panel-about">
+    <div class="about-content">
+      <h2>Hospital Discharge Manager</h2>
+      <p>Simulador de gestión de altas médicas hospitalarias diseñado para demostrar las capacidades de continuidad de negocio de <strong>Zerto</strong>. El sistema genera altas médicas ficticias de forma continua mediante el RBG (Random Booking Generator), permitiendo demostrar en tiempo real el impacto de un incidente y la recuperación con RPO de segundos.</p>
+      <p>Todos los datos de pacientes, diagnósticos y médicos son completamente ficticios y generados aleatoriamente. No se usa ni almacena ningún dato real de pacientes.</p>
+
+      <section class="panel-section" style="margin-top:20px">
+        <h3>Arquitectura — 4 VMs Ubuntu 24.04</h3>
+        <table class="vm-table">
+          <thead><tr><th>VM</th><th>Rol</th><th>Stack</th><th>Puerto</th><th>Repo</th></tr></thead>
+          <tbody>
+            <tr><td>VM1</td><td>Frontend</td><td>nginx + HTML/JS</td><td>80</td><td>hdm-frontend</td></tr>
+            <tr><td>VM2</td><td>Backend + RBG</td><td>FastAPI + Gunicorn</td><td>8000</td><td>hdm-backend</td></tr>
+            <tr><td>VM3</td><td>Base de datos</td><td>PostgreSQL 16</td><td>5432</td><td>hdm-database</td></tr>
+            <tr><td>VM4</td><td>Observability</td><td>nginx + HTML/JS</td><td>8080</td><td>hdm-observability</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel-section" style="margin-top:20px">
+        <h3>KPIs monitorizados</h3>
+        <table class="vm-table">
+          <thead><tr><th>KPI</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td>Altas procesadas</td><td>Contador total acumulado</td></tr>
+            <tr><td>Altas/hora</td><td>Ritmo de procesamiento en la última hora</td></tr>
+            <tr><td>Tiempo medio de alta</td><td>Minutos de tramitación por paciente</td></tr>
+            <tr><td>Camas liberadas hoy</td><td>Altas completadas en el día actual</td></tr>
+            <tr><td>Pacientes en espera</td><td>Altas pendientes de tramitar</td></tr>
+            <tr><td>% Ocupación de planta</td><td>Por unidad hospitalaria</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <p style="margin-top:20px;font-size:11px;color:var(--text-muted)">
+        HDM v1.0.0 · github.com/smonterohpe · HPE Zerto Demo Suite
+      </p>
+    </div>
+  </div>
+
+</div><!-- /panels -->
+
+<script>
+const API = '/api';   // Proxy nginx → VM2:8000
+let activeDemoType = null;
+
+// ── Reloj ──────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('es-ES');
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ── Tabs ───────────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const tabs = ['kpis','systems','zerto','about'];
+    t.classList.toggle('active', tabs[i] === id);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+}
+
+// ── Fetch helpers ──────────────────────────────────
+async function api(path) {
+  const r = await fetch(API + path);
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+// ── KPIs ───────────────────────────────────────────
+async function refreshKPIs() {
+  const d = await api('/kpis');
+  document.getElementById('k-total').textContent   = d.total_discharges.toLocaleString('es-ES');
+  document.getElementById('k-hour').textContent    = d.discharges_last_hour;
+  document.getElementById('k-avg').textContent     = d.avg_processing_time_min ?? '—';
+  document.getElementById('k-beds').textContent    = d.beds_freed_today;
+  document.getElementById('k-pending').textContent = d.patients_pending;
+  document.getElementById('k-24h').textContent     = d.discharges_last_24h;
+  const pc = document.getElementById('kpi-pending-card');
+  pc.className = 'kpi-card' + (d.patients_pending > 10 ? ' danger' : '');
+}
+
+// ── Ward occupancy ─────────────────────────────────
+async function refreshWards() {
+  const wards = await api('/wards');
+  const g = document.getElementById('ward-grid');
+  g.innerHTML = wards.map(w => {
+    const pct = w.occupancy_pct ?? 0;
+    const cls = pct >= 90 ? 'full' : pct >= 75 ? 'high' : '';
+    return `<div class="ward-card">
+      <div class="ward-name">${w.ward_name}</div>
+      <div class="ward-bar-bg"><div class="ward-bar-fill ${cls}" style="width:${Math.min(pct,100)}%"></div></div>
+      <div class="ward-stats">
+        <span>${w.specialty}</span>
+        <span>${pct}% · ${w.freed_today} liberadas hoy</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Health / Systems ──────────────────────────────
+async function refreshHealth() {
+  const h = await api('/health');
+  const vmEl = (id, up) => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = up ? 'UP' : 'DOWN'; el.className = 'sys-status ' + (up ? 'up' : 'down'); }
+  };
+  vmEl('sys-vm2', h.database === 'up');
+  vmEl('sys-vm3', h.database === 'up');
+  document.getElementById('vm2-rbg').textContent = h.rbg?.generated_count ?? '—';
+  document.getElementById('vm3-count').textContent = '—';
+  document.getElementById('live-dot').className = 'live-dot' + (h.status === 'ok' ? '' : ' dead');
+  const ts = new Date().toLocaleTimeString('es-ES');
+  document.getElementById('vm1-ts').textContent = ts;
+
+  // RBG status header
+  const rbg = h.rbg;
+  if (rbg) {
+    document.getElementById('rbg-status').textContent =
+      'RBG: ' + (rbg.paused ? 'PAUSADO' : rbg.running ? 'ACTIVO' : 'INACTIVO');
+  }
+}
+
+// ── Events / Log ───────────────────────────────────
+async function refreshEvents() {
+  const evs = await api('/events?n=20');
+  document.getElementById('log-count').textContent = evs.length + ' eventos';
+  document.getElementById('log-entries').innerHTML = evs.map(e => {
+    const t = new Date(e.created_at).toLocaleTimeString('es-ES');
+    return `<div class="log-entry">
+      <span class="log-time">${t}</span>
+      <span class="log-sev ${e.severity}">[${e.severity}]</span>
+      <span class="log-msg">${e.message}</span>
+    </div>`;
+  }).join('');
+
+  // Banner de alerta si hay evento crítico reciente (últimos 5 min)
+  const latest = evs[0];
+  const banner = document.getElementById('demo-banner');
+  if (latest && ['critical','warning'].includes(latest.severity)) {
+    const age = (Date.now() - new Date(latest.created_at)) / 1000;
+    if (age < 300) {
+      banner.textContent = '⚠ ' + latest.message;
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+  if (latest?.event_type === 'demo_recovery') banner.style.display = 'none';
+}
+
+// ── Demo Engine ─────────────────────────────────────
+async function runDemo(type) {
+  const resultEl = document.getElementById('demo-result');
+  resultEl.textContent = `Ejecutando ${type}...`;
+  try {
+    const r = await fetch(`${API}/demo/${type}`, { method: 'POST' });
+    const d = await r.json();
+    resultEl.textContent = `✓ ${d.message}`;
+    activeDemoType = type;
+    await refreshEvents();
+  } catch(e) {
+    resultEl.textContent = `✗ Error: ${e.message}`;
+  }
+}
+
+// ── Ciclo de refresco ──────────────────────────────
+async function refreshAll() {
+  try {
+    await Promise.allSettled([
+      refreshKPIs(),
+      refreshWards(),
+      refreshHealth(),
+      refreshEvents(),
+    ]);
+  } catch(e) {
+    console.error('Refresh error:', e);
+  }
+}
+
+refreshAll();
+setInterval(refreshAll, 4000);
+</script>
+</body>
+</html>
