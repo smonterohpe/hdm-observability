@@ -272,27 +272,20 @@ canvas{width:100%!important;display:block}
   <!-- Range selector -->
   <div class="range-bar">
     <span class="range-label" id="lbl-range">Período:</span>
-    <button class="range-btn" onclick="setRange(15,'15min')" data-min="15">Últimos 15 min</button>
-    <button class="range-btn" onclick="setRange(30,'30min')" data-min="30">Últimos 30 min</button>
-    <button class="range-btn active" onclick="setRange(60,'1h')" data-min="60">Última hora</button>
-    <button class="range-btn" onclick="setRange(180,'3h')" data-min="180">Últimas 3 h</button>
-    <button class="range-btn" onclick="setRange(360,'6h')" data-min="360">Últimas 6 h</button>
-    <button class="range-btn" onclick="setRange(1440,'24h')" data-min="1440">Últimas 24 h</button>
+    <button class="range-btn" onclick="setRange(15)" data-min="15">Últimos 15 min</button>
+    <button class="range-btn" onclick="setRange(30)" data-min="30">Últimos 30 min</button>
+    <button class="range-btn active" onclick="setRange(60)" data-min="60">Última hora</button>
+    <button class="range-btn" onclick="setRange(180)" data-min="180">Últimas 3 h</button>
+    <button class="range-btn" onclick="setRange(360)" data-min="360">Últimas 6 h</button>
+    <button class="range-btn" onclick="setRange(1440)" data-min="1440">Últimas 24 h</button>
   </div>
 
-  <!-- Charts -->
+  <!-- Chart histórico -->
   <div class="chart-card">
     <div class="chart-header">
-      <div><div class="chart-title" id="lbl-chart-rate">Altas por minuto</div><div class="chart-sub" id="lbl-chart-rate-sub">timeline en tiempo real</div></div>
+      <div><div class="chart-title" id="lbl-chart-rate">Altas por minuto — histórico</div><div class="chart-sub" id="lbl-chart-rate-sub">datos reales desde la base de datos</div></div>
     </div>
-    <canvas id="chart-rate" height="100"></canvas>
-  </div>
-
-  <div class="chart-card">
-    <div class="chart-header">
-      <div><div class="chart-title" id="lbl-chart-total">Altas acumuladas</div><div class="chart-sub" id="lbl-chart-total-sub">crecimiento desde el inicio de la sesión</div></div>
-    </div>
-    <canvas id="chart-total" height="100"></canvas>
+    <canvas id="chart-rate" height="110"></canvas>
   </div>
 
   <!-- Ward occupancy -->
@@ -658,55 +651,54 @@ function switchTab(id){
   document.getElementById('panel-'+id).classList.add('active');
 }
 
-// ── Charts ─────────────────────────────────────
+// ── Chart histórico ────────────────────────────
 Chart.defaults.color='#64748b';
 Chart.defaults.borderColor='#2d3148';
-function makeChart(id, label, color){
-  return new Chart(document.getElementById(id),{
-    type:'line',
-    data:{labels:[],datasets:[{label,data:[],borderColor:color,backgroundColor:color+'22',borderWidth:2,pointRadius:2,fill:true,tension:.35}]},
-    options:{
-      responsive:true,maintainAspectRatio:true,
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{ticks:{maxTicksLimit:8,font:{size:10}},grid:{color:'#2d314833'}},
-        y:{ticks:{font:{size:10}},grid:{color:'#2d314833'},beginAtZero:true}
-      },
-      animation:{duration:300}
-    }
-  });
-}
-const chartRate  = makeChart('chart-rate',  'Altas/min', '#1d9e75');
-const chartTotal = makeChart('chart-total', 'Acumuladas','#3b82f6');
-const rateHistory=[], totalHistory=[];
-
-function pushChart(chart, history, label, value, max){
-  history.push({t:label,v:value});
-  if(history.length>max) history.shift();
-  chart.data.labels=history.map(h=>h.t);
-  chart.data.datasets[0].data=history.map(h=>h.v);
-  chart.update('none');
-}
+const chartRate = new Chart(document.getElementById('chart-rate'),{
+  type:'bar',
+  data:{labels:[],datasets:[
+    {label:'Altas/min',data:[],backgroundColor:'#1d9e7566',borderColor:'#1d9e75',borderWidth:1.5,borderRadius:3,order:2},
+  ]},
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>i[0].label,label:i=>i.parsed.y+' altas'}}},
+    scales:{
+      x:{ticks:{maxTicksLimit:12,font:{size:10}},grid:{color:'#2d314822'}},
+      y:{ticks:{font:{size:10}},grid:{color:'#2d314833'},beginAtZero:true}
+    },
+    animation:{duration:400}
+  }
+});
 
 // ── Range selector ─────────────────────────────
 let rangeMin=60;
-function setRange(min, label){
+function setRange(min){
   rangeMin=min;
   document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',+b.dataset.min===min));
-  // Limpiar gráficas al cambiar rango
-  rateHistory.length=0; totalHistory.length=0;
-  chartRate.data.labels=[]; chartRate.data.datasets[0].data=[]; chartRate.update();
-  chartTotal.data.labels=[]; chartTotal.data.datasets[0].data=[]; chartTotal.update();
+  refreshHistory(); // carga inmediata al cambiar rango
+}
+
+async function refreshHistory(){
+  try{
+    const {data}=await fetchJSON('/api/kpis/history?minutes='+rangeMin);
+    chartRate.data.labels=data.map(d=>d.bucket);
+    chartRate.data.datasets[0].data=data.map(d=>d.total);
+    chartRate.update('none');
+    // Actualizar subtítulo con el período
+    const sub=document.getElementById('lbl-chart-rate-sub');
+    if(sub) sub.textContent='Últimos '+rangeMin+' min · '+data.length+' puntos';
+  }catch(e){console.error('History error:',e)}
 }
 
 // ── Timer última alta ──────────────────────────
 let lastDischargeTime=null;
 setInterval(()=>{
   if(!lastDischargeTime) return;
-  const secs=Math.floor((Date.now()-lastDischargeTime)/1000);
+  const secs=Math.max(0, Math.floor((Date.now()-lastDischargeTime)/1000));
   const el=document.getElementById('last-timer');
   el.textContent=secs+' s';
-  el.style.color=secs>60?'var(--danger)':secs>30?'var(--warning)':'var(--info)';
+  // Amarillo >3 min, rojo >5 min
+  el.style.color=secs>300?'var(--danger)':secs>180?'var(--warning)':'var(--info)';
 },1000);
 
 // ── Helpers ────────────────────────────────────
@@ -781,16 +773,22 @@ async function refreshKPIs(){
 }
 
 // ── Last discharge ─────────────────────────────
+let lastDischargeId = null;
 async function refreshLastDischarge(){
-  const {data:rows}=await fetchJSON('/api/discharges/recent?n=1');
-  if(!rows.length) return;
-  const d=rows[0];
-  const raw=d.discharge_date;
-  lastDischargeTime=new Date(raw.endsWith('Z')?raw:raw+'Z').getTime();
-  document.getElementById('ld-name').textContent=d.patient_name;
-  document.getElementById('ld-ward').textContent=d.ward;
-  document.getElementById('ld-diag').textContent=d.diagnosis_code+' — '+(d.diagnosis_description||'');
-  document.getElementById('ld-doctor').textContent=d.attending_unit;
+  try{
+    const {data:rows}=await fetchJSON('/api/discharges/recent?n=1');
+    if(!rows.length) return;
+    const d=rows[0];
+    // Solo actualizar si es una alta diferente a la última vista
+    if(d.id === lastDischargeId) return;
+    lastDischargeId = d.id;
+    const raw=d.discharge_date;
+    lastDischargeTime=new Date(raw.endsWith('Z')?raw:raw+'Z').getTime();
+    document.getElementById('ld-name').textContent=d.patient_name;
+    document.getElementById('ld-ward').textContent=d.ward;
+    document.getElementById('ld-diag').textContent=d.diagnosis_code+' — '+(d.diagnosis_description||'');
+    document.getElementById('ld-doctor').textContent=d.attending_unit;
+  }catch(e){console.error('Last discharge error:',e)}
 }
 
 // ── Wards ──────────────────────────────────────
@@ -948,6 +946,7 @@ async function refreshZerto(){
 }
 
 // ── Main loop ──────────────────────────────────
+let historyTick=0;
 async function refreshAll(){
   await Promise.allSettled([
     refreshKPIs(),
@@ -957,12 +956,16 @@ async function refreshAll(){
     refreshHealth(),
     refreshZerto(),
   ]);
+  // Refrescar gráfica histórica cada 3 ciclos (~12s) para no sobrecargar la BD
+  historyTick++;
+  if(historyTick%3===0) refreshHistory();
 }
 
 // ── Init ───────────────────────────────────────
 document.documentElement.setAttribute('data-theme',theme);
 applyI18n();
 refreshAll();
+refreshHistory(); // carga histórica inmediata al arrancar
 setInterval(refreshAll,4000);
 </script>
 </body>
